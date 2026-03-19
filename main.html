@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Void Browser</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+--Bg:#08080a;
+--BgLight:#0e0e12;
+--BgLighter:#141418;
+--BgHover:#1a1a1f;
+--Border:rgba(255,255,255,0.05);
+--BorderLight:rgba(255,255,255,0.08);
+--Text:#f4f4f5;
+--TextMuted:#a1a1aa;
+--TextDim:#52525b;
+--Accent:#3b82f6;
+--AccentMuted:rgba(59,130,246,0.12);
+}
+html,body{height:100%;font-family:'Plus Jakarta Sans',-apple-system,sans-serif;background:var(--Bg);color:var(--Text);overflow:hidden;user-select:none}
+.Browser{display:flex;flex-direction:column;height:100vh}
+.Chrome{background:rgba(12,12,14,0.9);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid var(--Border);transition:transform 0.35s cubic-bezier(0.4,0,0.2,1),opacity 0.35s cubic-bezier(0.4,0,0.2,1);overflow:visible;position:relative;z-index:50}
+.Chrome.Hidden{transform:translateY(-100%);opacity:0;pointer-events:none}
+.TabRow{display:flex;align-items:center;height:40px;padding:6px 10px 6px 10px;position:relative;z-index:1}
+.Tabs{display:flex;align-items:center;gap:2px;flex:1;overflow-x:auto;scrollbar-width:none}
+.Tabs::-webkit-scrollbar{display:none}
+.Tab{display:flex;align-items:center;height:30px;padding:0 10px;background:transparent;border-radius:8px;cursor:pointer;gap:8px;min-width:120px;max-width:180px;transition:background 0.2s cubic-bezier(0.4,0,0.2,1),opacity 0.15s,transform 0.15s}
+.Tab:hover{background:rgba(74,71,74,0.3)}
+.Tab.Active{background:rgba(49,47,48,0.6)}
+.Tab.New{animation:TabIn 0.2s cubic-bezier(0.4,0,0.2,1) forwards}
+.Tab.Closing{opacity:0;transform:scale(0.9);pointer-events:none}
+@keyframes TabIn{from{opacity:0;max-width:0;min-width:0;padding:0;margin:0}to{opacity:1;max-width:180px;min-width:120px;padding:0 10px}}
+.TabIcon{width:14px;height:14px;border-radius:3px;flex-shrink:0;opacity:0.9}
+.TabText{font-size:12px;font-weight:500;color:var(--TextMuted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;transition:color 0.2s}
+.Tab.Active .TabText{color:var(--Text)}
+.TabClose{width:18px;height:18px;border:none;background:transparent;color:var(--TextDim);border-radius:4px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:10px;opacity:0;transition:all 0.15s;flex-shrink:0}
+.Tab:hover .TabClose{opacity:0.7}
+.TabClose:hover{opacity:1!important;background:rgba(239,68,68,0.2);color:#f87171}
+.NewTabBtn{width:28px;height:28px;border:none;background:transparent;color:var(--TextDim);border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:300;flex-shrink:0;transition:all 0.15s;margin-left:4px}
+.NewTabBtn:hover{background:rgba(74,71,74,0.4);color:var(--Text)}
+.NavBar{display:flex;align-items:center;height:48px;padding:0 10px 8px;gap:6px;overflow:visible;position:relative;z-index:10}
+.NavBtn{width:32px;height:32px;border:none;background:transparent;color:var(--TextMuted);border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s}
+.NavBtn:hover:not(:disabled){background:rgba(74,71,74,0.4);color:var(--Text)}
+.NavBtn:disabled{opacity:0.25;cursor:default}
+.NavBtn svg{width:16px;height:16px}
+.UrlBarWrapper{flex:1;position:relative;margin:0 6px;z-index:200}
+.UrlBar{display:flex;align-items:center;height:36px;background:rgba(49,47,48,0.5);border:1px solid rgba(62,64,66,0.4);border-radius:10px;padding:0 12px;gap:10px;transition:all 0.2s cubic-bezier(0.4,0,0.2,1)}
+.UrlBar:focus-within{border-color:rgba(62,64,66,0.7);background:rgba(49,47,48,0.7)}
+.UrlBar svg{width:14px;height:14px;color:var(--TextDim);flex-shrink:0}
+.UrlInput{flex:1;background:transparent;border:none;color:var(--Text);font-family:inherit;font-size:13px;font-weight:400;outline:none}
+.UrlInput::placeholder{color:var(--TextDim)}
+.Suggestions{position:absolute;top:100%;left:0;right:0;margin-top:6px;background:rgba(35,35,40,0.98);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(62,64,66,0.5);border-radius:10px;overflow:hidden;display:none;z-index:9999}
+.Suggestions.Open{display:block}
+.SuggestItem{display:flex;align-items:center;padding:10px 14px;gap:10px;cursor:pointer;transition:background 0.12s}
+.SuggestItem:hover,.SuggestItem.Selected{background:rgba(74,71,74,0.5)}
+.SuggestItem svg{width:14px;height:14px;color:var(--TextDim);flex-shrink:0}
+.SuggestItem span{font-size:13px;color:var(--Text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.BookmarkBar{display:flex;align-items:center;height:32px;padding:0 10px 6px;gap:6px;overflow-x:auto;scrollbar-width:none;position:relative;z-index:1}
+.BookmarkBar::-webkit-scrollbar{display:none}
+.BookmarkItem{display:flex;align-items:center;height:26px;padding:0 10px;background:transparent;border-radius:6px;cursor:pointer;gap:6px;flex-shrink:0;transition:background 0.15s}
+.BookmarkItem:hover{background:rgba(74,71,74,0.4)}
+.BookmarkItem img{width:14px;height:14px;border-radius:3px;opacity:0.85}
+.BookmarkItem span{font-size:12px;color:var(--TextMuted);white-space:nowrap}
+.ViewArea{flex:1;position:relative;background:var(--Bg)}
+.ViewArea.Fullscreen{position:fixed;inset:0;z-index:1000}
+.Frame{width:100%;height:100%;border:none;display:none;background:#fff}
+.StartPage{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;overflow:visible}
+.AcrylicBg{position:absolute;inset:0;background:#0a0a0c;overflow:hidden}
+.AcrylicBg::before{content:'';position:absolute;bottom:-20%;left:50%;transform:translateX(-30%);width:70%;height:80%;background:radial-gradient(ellipse at center,rgba(97,129,184,0.35) 0%,rgba(97,129,184,0.12) 40%,transparent 70%);filter:blur(80px)}
+.AcrylicBg::after{content:'';position:absolute;bottom:-10%;left:50%;transform:translateX(-70%);width:60%;height:70%;background:radial-gradient(ellipse at center,rgba(160,120,145,0.32) 0%,rgba(147,125,137,0.1) 45%,transparent 70%);filter:blur(90px)}
+.StartContent{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:32px}
+.Logo{font-size:36px;font-weight:600;color:var(--Text);letter-spacing:-1.5px}
+.Logo span{color:var(--Accent)}
+.SearchBox{width:520px;display:flex;flex-direction:column;gap:16px;position:relative;z-index:100}
+.SearchBarWrapper{position:relative}
+.SearchBarMain{display:flex;align-items:center;height:52px;background:rgba(49,47,48,0.6);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid rgba(62,64,66,0.5);border-radius:12px;padding:0 6px 0 16px;gap:12px;transition:all 0.2s cubic-bezier(0.4,0,0.2,1)}
+.SearchBarMain:focus-within{border-color:rgba(62,64,66,0.8);background:rgba(62,64,66,0.5)}
+.SearchBarMain svg{width:18px;height:18px;color:var(--TextMuted);flex-shrink:0}
+.SearchInputMain{flex:1;background:transparent;border:none;color:var(--Text);font-family:'Plus Jakarta Sans',sans-serif;font-size:15px;font-weight:400;outline:none}
+.SearchInputMain::placeholder{color:var(--TextDim)}
+.SearchSubmit{width:40px;height:40px;background:rgba(62,64,66,0.6);border:1px solid rgba(255,255,255,0.06);border-radius:8px;color:var(--Accent);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s}
+.SearchSubmit:hover{background:rgba(62,64,66,0.8)}
+.SearchSubmit svg{width:18px;height:18px}
+.StartSuggestions{position:absolute;top:100%;left:0;right:0;margin-top:6px;background:rgba(35,35,40,0.98);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(62,64,66,0.5);border-radius:10px;overflow:hidden;display:none;z-index:9999;max-height:240px;overflow-y:auto}
+.StartSuggestions.Open{display:block}
+.EngineList{display:flex;justify-content:center;gap:6px}
+.EngineBtn{padding:8px 16px;background:rgba(74,71,74,0.9);border:none;border-radius:8px;color:var(--TextMuted);font-family:inherit;font-size:12px;font-weight:500;cursor:pointer;transition:all 0.15s}
+.EngineBtn:hover{background:rgba(74,71,74,1);color:var(--Text)}
+.EngineBtn.Active{background:rgba(251,253,253,0.95);color:#0a0a0c;font-weight:600}
+.QuickLinks{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:8px;width:100%;max-width:400px}
+.QuickLink{display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 10px;background:rgba(49,47,48,0.5);border:1px solid rgba(62,64,66,0.3);border-radius:10px;cursor:pointer;transition:all 0.15s}
+.QuickLink:hover{background:rgba(62,64,66,0.5);border-color:rgba(62,64,66,0.5)}
+.QuickLink img{width:32px;height:32px;border-radius:8px;opacity:0.9}
+.QuickLink span{font-size:11px;color:var(--TextMuted);text-align:center;max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.Panel{position:fixed;top:0;right:0;width:340px;height:100%;background:rgba(25,25,28,0.98);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-left:1px solid rgba(62,64,66,0.4);z-index:100;transform:translateX(100%);transition:transform 0.3s cubic-bezier(0.4,0,0.2,1);display:flex;flex-direction:column}
+.Panel.Open{transform:translateX(0)}
+.PanelHeader{display:flex;align-items:center;justify-content:space-between;height:56px;padding:0 20px;border-bottom:1px solid rgba(62,64,66,0.4)}
+.PanelTitle{font-size:15px;font-weight:600}
+.PanelClose{width:28px;height:28px;border:none;background:transparent;color:var(--TextMuted);border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;transition:all 0.15s}
+.PanelClose:hover{background:rgba(74,71,74,0.5);color:var(--Text)}
+.PanelBody{flex:1;overflow-y:auto;padding:16px}
+.PanelBody::-webkit-scrollbar{width:4px}
+.PanelBody::-webkit-scrollbar-track{background:transparent}
+.PanelBody::-webkit-scrollbar-thumb{background:rgba(62,64,66,0.5);border-radius:2px}
+.Section{margin-bottom:20px}
+.SectionLabel{font-size:11px;font-weight:600;color:var(--TextDim);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px}
+.ListRow{display:flex;align-items:center;padding:10px 12px;background:rgba(49,47,48,0.5);border-radius:8px;margin-bottom:6px;cursor:pointer;gap:10px;transition:background 0.15s}
+.ListRow:hover{background:rgba(62,64,66,0.5)}
+.ListRow img{width:18px;height:18px;border-radius:4px;flex-shrink:0;opacity:0.85}
+.ListRowInfo{flex:1;min-width:0}
+.ListRowTitle{font-size:13px;color:var(--Text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ListRowUrl{font-size:11px;color:var(--TextDim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ListRowTime{font-size:10px;color:var(--TextDim);flex-shrink:0}
+.ListRowDel{width:20px;height:20px;border:none;background:transparent;color:var(--TextDim);border-radius:4px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;opacity:0;transition:all 0.15s;flex-shrink:0}
+.ListRow:hover .ListRowDel{opacity:1}
+.ListRowDel:hover{background:rgba(239,68,68,0.2);color:#f87171}
+.SettingsGroup{margin-bottom:20px}
+.SettingsGroupTitle{font-size:11px;font-weight:600;color:var(--TextDim);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;padding-left:2px}
+.SettingsCard{background:rgba(49,47,48,0.4);border:1px solid rgba(62,64,66,0.3);border-radius:10px;overflow:hidden}
+.SettingItem{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid rgba(62,64,66,0.2)}
+.SettingItem:last-child{border-bottom:none}
+.SettingName{font-size:13px;color:var(--Text)}
+.SettingValue{font-size:13px;color:var(--TextMuted)}
+.SettingSelect{background:rgba(35,35,40,0.9);border:1px solid rgba(62,64,66,0.5);border-radius:6px;color:var(--Text);font-family:inherit;font-size:12px;padding:6px 10px;cursor:pointer;outline:none}
+.SettingBtn{padding:6px 14px;background:rgba(74,71,74,0.9);border:none;border-radius:6px;color:var(--TextMuted);font-family:inherit;font-size:12px;cursor:pointer;transition:all 0.15s}
+.SettingBtn:hover{background:rgba(74,71,74,1);color:var(--Text)}
+.Checkbox{width:20px;height:20px;background:transparent;border:2px solid rgba(120,120,125,0.6);border-radius:4px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s}
+.Checkbox svg{width:14px;height:14px;opacity:0;color:#0a0a0c;transition:opacity 0.15s}
+.Checkbox.On{background:rgba(251,253,253,0.95);border-color:rgba(251,253,253,0.95)}
+.Checkbox.On svg{opacity:1}
+.Modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(0.95);background:rgba(35,35,40,0.98);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid rgba(62,64,66,0.5);border-radius:14px;z-index:110;opacity:0;visibility:hidden;transition:all 0.2s cubic-bezier(0.4,0,0.2,1);width:320px}
+.Modal.Open{opacity:1;visibility:visible;transform:translate(-50%,-50%) scale(1)}
+.ModalHeader{padding:20px 20px 16px}
+.ModalTitle{font-size:16px;font-weight:600}
+.ModalBody{padding:0 20px 16px}
+.ModalInput{width:100%;height:40px;background:rgba(49,47,48,0.6);border:1px solid rgba(62,64,66,0.5);border-radius:8px;color:var(--Text);font-family:inherit;font-size:13px;padding:0 12px;margin-bottom:10px;outline:none;transition:border-color 0.15s}
+.ModalInput:focus{border-color:rgba(62,64,66,0.8)}
+.ModalFooter{padding:0 20px 20px;display:flex;justify-content:flex-end;gap:10px}
+.Btn{height:36px;padding:0 16px;border:none;border-radius:8px;font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;transition:all 0.15s}
+.BtnPrimary{background:rgba(251,253,253,0.95);color:#0a0a0c}
+.BtnPrimary:hover{background:rgba(251,253,253,1)}
+.BtnGhost{background:rgba(74,71,74,0.9);color:var(--TextMuted);border:none}
+.BtnGhost:hover{color:var(--Text);background:rgba(74,71,74,1)}
+.Overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:99;opacity:0;visibility:hidden;transition:all 0.2s}
+.Overlay.Open{opacity:1;visibility:visible}
+.ContextMenu{position:fixed;background:rgba(35,35,40,0.98);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(62,64,66,0.5);border-radius:10px;padding:6px;z-index:200;min-width:160px;display:none}
+.ContextMenu.Open{display:block}
+.ContextItem{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;font-size:12px;color:var(--TextMuted);cursor:pointer;transition:all 0.1s}
+.ContextItem:hover{background:rgba(74,71,74,0.5);color:var(--Text)}
+.ContextItem svg{width:14px;height:14px;opacity:0.6}
+.ContextDivider{height:1px;background:rgba(62,64,66,0.5);margin:6px 0}
+.Toast{position:fixed;bottom:20px;right:20px;background:rgba(35,35,40,0.95);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(62,64,66,0.5);border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:10px;z-index:300;transform:translateY(80px);opacity:0;transition:all 0.3s cubic-bezier(0.4,0,0.2,1)}
+.Toast.Show{transform:translateY(0);opacity:1}
+.Toast svg{width:16px;height:16px;color:#22c55e}
+.ToastText{font-size:13px;color:var(--Text)}
+.ExitFullscreen{position:fixed;top:12px;left:50%;transform:translateX(-50%) translateY(-50px);background:rgba(35,35,40,0.9);border:1px solid rgba(62,64,66,0.5);border-radius:8px;padding:8px 14px;font-size:12px;color:var(--TextMuted);z-index:1001;opacity:0;transition:all 0.3s cubic-bezier(0.4,0,0.2,1);cursor:pointer}
+.ExitFullscreen.Show{transform:translateX(-50%) translateY(0);opacity:1}
+.ExitFullscreen:hover{color:var(--Text)}
+.EmptyState{text-align:center;padding:40px 20px;color:var(--TextDim);font-size:13px}
+.LoadingBar{position:absolute;top:0;left:0;width:100%;height:2px;background:var(--BgLighter);z-index:50;opacity:0;transition:opacity 0.15s}
+.LoadingBar.Active{opacity:1}
+.LoadingBarInner{height:100%;background:linear-gradient(90deg,var(--Accent),#8b5cf6,var(--Accent));width:30%;animation:LoadingAnim 1.2s ease-in-out infinite}
+@keyframes LoadingAnim{0%{transform:translateX(-100%)}100%{transform:translateX(400%)}}
+</style>
+</head>
+<body>
+<div class="Browser">
+<div class="Chrome" id="Chrome">
+<div class="TabRow">
+<div class="Tabs" id="TabContainer"></div>
+</div>
+<div class="NavBar">
+<button class="NavBtn" id="BackBtn" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button>
+<button class="NavBtn" id="ForwardBtn" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></button>
+<button class="NavBtn" id="ReloadBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg></button>
+<button class="NavBtn" id="HomeBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><path d="M9 22V12h6v10"/></svg></button>
+<div class="UrlBarWrapper">
+<div class="UrlBar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg><input type="text" class="UrlInput" id="UrlInput" placeholder="Search or enter URL" autocomplete="off"></div>
+<div class="Suggestions" id="Suggestions"></div>
+</div>
+<button class="NavBtn" id="BookmarkBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg></button>
+<button class="NavBtn" id="HistoryBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></button>
+<button class="NavBtn" id="SettingsBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06a1.65 1.65 0 001.82.33h.09a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82v.09a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></button>
+<button class="NavBtn" id="FullscreenBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/></svg></button>
+</div>
+<div class="BookmarkBar" id="BookmarkBar"></div>
+</div>
+<div class="ViewArea" id="ViewArea"><div class="LoadingBar" id="LoadingBar"><div class="LoadingBarInner"></div></div></div>
+</div>
+<div class="Overlay" id="Overlay"></div>
+<div class="Panel" id="HistoryPanel"><div class="PanelHeader"><div class="PanelTitle">History</div><button class="PanelClose" id="HistoryClose">✕</button></div><div class="PanelBody" id="HistoryBody"></div></div>
+<div class="Panel" id="SettingsPanel"><div class="PanelHeader"><div class="PanelTitle">Settings</div><button class="PanelClose" id="SettingsClose">✕</button></div><div class="PanelBody"><div class="SettingsGroup"><div class="SettingsGroupTitle">Search</div><div class="SettingsCard"><div class="SettingItem"><span class="SettingName">Default Search Engine</span><select class="SettingSelect" id="EngineSelect"><option value="google">Google</option><option value="duckduckgo">DuckDuckGo</option><option value="bing">Bing</option><option value="brave">Brave</option></select></div></div></div><div class="SettingsGroup"><div class="SettingsGroupTitle">Appearance</div><div class="SettingsCard"><div class="SettingItem"><span class="SettingName">Show Bookmarks Bar</span><div class="Checkbox" id="BookmarkToggle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></div></div></div></div><div class="SettingsGroup"><div class="SettingsGroupTitle">Privacy</div><div class="SettingsCard"><div class="SettingItem"><span class="SettingName">Clear Browsing History</span><button class="SettingBtn" id="ClearHistoryBtn">Clear</button></div><div class="SettingItem"><span class="SettingName">Clear Cookies</span><button class="SettingBtn" id="ClearCookiesBtn">Clear</button></div></div></div><div class="SettingsGroup"><div class="SettingsGroupTitle">About</div><div class="SettingsCard"><div class="SettingItem"><span class="SettingName">Version</span><span class="SettingValue">1.0.0</span></div><div class="SettingItem"><span class="SettingName">Void Browser</span><span class="SettingValue">Made by Zayn</span></div></div></div></div></div>
+<div class="Modal" id="BookmarkModal"><div class="ModalHeader"><div class="ModalTitle">Add Bookmark</div></div><div class="ModalBody"><input type="text" class="ModalInput" id="BookmarkNameInput" placeholder="Name"><input type="text" class="ModalInput" id="BookmarkUrlInput" placeholder="URL"></div><div class="ModalFooter"><button class="Btn BtnGhost" id="BookmarkCancel">Cancel</button><button class="Btn BtnPrimary" id="BookmarkSave">Save</button></div></div>
+<div class="ContextMenu" id="TabContextMenu"><div class="ContextItem" data-action="newtab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>New Tab</div><div class="ContextItem" data-action="reload"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 11-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>Reload</div><div class="ContextItem" data-action="duplicate"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Duplicate</div><div class="ContextDivider"></div><div class="ContextItem" data-action="close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>Close Tab</div></div>
+<div class="ContextMenu" id="BookmarkContextMenu"><div class="ContextItem" data-action="open"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><path d="M15 3h6v6M10 14L21 3"/></svg>Open</div><div class="ContextItem" data-action="newtab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Open in New Tab</div><div class="ContextDivider"></div><div class="ContextItem" data-action="delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>Delete</div></div>
+<div class="Toast" id="Toast"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg><span class="ToastText" id="ToastText"></span></div>
+<div class="ExitFullscreen" id="ExitFullscreen">Press ESC to exit fullscreen</div>
+<script>
+const Engines={google:"https://www.google.com/search?igu=1&q=",duckduckgo:"https://duckduckgo.com/?q=",bing:"https://www.bing.com/search?q=",brave:"https://search.brave.com/search?q="};
+const State={Tabs:[],ActiveTab:null,History:JSON.parse(localStorage.getItem("VoidHistory")||"[]"),Bookmarks:JSON.parse(localStorage.getItem("VoidBookmarks")||"[]"),Config:JSON.parse(localStorage.getItem("VoidConfig")||'{"Engine":"google","ShowBookmarks":true}'),IsFullscreen:false,ContextTab:null,ContextBookmark:null,SuggestIndex:-1};
+const GenerateId=()=>Date.now().toString(36)+Math.random().toString(36).slice(2);
+const GetFavicon=Url=>{try{return"https://www.google.com/s2/favicons?sz=64&domain="+new URL(Url).hostname}catch{return"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2'%3E%3Cpath d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'/%3E%3Cpath d='M14 2v6h6'/%3E%3C/svg%3E"}};
+const IsValidUrl=Str=>/^(https?:\/\/)?([\w\d-]+\.)+[\w]{2,}(\/.*)?$/i.test(Str);
+const NormalizeUrl=Input=>IsValidUrl(Input)?(Input.startsWith("http")?Input:"https://"+Input):(Engines[State.Config.Engine]||Engines.google)+encodeURIComponent(Input);
+const SaveState=()=>{localStorage.setItem("VoidHistory",JSON.stringify(State.History));localStorage.setItem("VoidBookmarks",JSON.stringify(State.Bookmarks));localStorage.setItem("VoidConfig",JSON.stringify(State.Config))};
+const ShowToast=Message=>{document.getElementById("ToastText").textContent=Message;document.getElementById("Toast").classList.add("Show");setTimeout(()=>document.getElementById("Toast").classList.remove("Show"),2500)};
+function UpdateSuggestions(Query){const Container=document.getElementById("Suggestions");if(!Query.trim()){Container.classList.remove("Open");return}const Matches=[...State.History.filter(H=>H.Url.toLowerCase().includes(Query.toLowerCase())||H.Title.toLowerCase().includes(Query.toLowerCase())).slice(0,5)];if(Matches.length===0){Container.classList.remove("Open");return}Container.innerHTML=Matches.map((M,I)=>'<div class="SuggestItem'+(I===State.SuggestIndex?' Selected':'')+'" data-url="'+M.Url+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg><span>'+M.Title+' - '+M.Url+'</span></div>').join("");Container.classList.add("Open");Container.querySelectorAll(".SuggestItem").forEach(El=>El.addEventListener("click",()=>{NavigateWithPopup(State.ActiveTab,El.dataset.url);Container.classList.remove("Open")}))}
+function CreateStartPage(TabId){const Div=document.createElement("div");Div.className="StartPage";Div.id="Start_"+TabId;Div.innerHTML='<div class="AcrylicBg"></div><div class="StartContent"><div class="Logo">Void<span>.</span></div><div class="SearchBox"><div class="SearchBarWrapper"><div class="SearchBarMain"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg><input type="text" class="SearchInputMain" placeholder="Search the web..."><button class="SearchSubmit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg></button></div><div class="StartSuggestions" id="StartSuggest_'+TabId+'"></div></div><div class="EngineList">'+Object.keys(Engines).map(E=>'<button class="EngineBtn '+(State.Config.Engine===E?"Active":"")+'" data-engine="'+E+'">'+E.charAt(0).toUpperCase()+E.slice(1)+'</button>').join("")+'</div><div class="QuickLinks" id="QuickLinks_'+TabId+'"></div></div></div>';const Input=Div.querySelector(".SearchInputMain");const SuggestBox=Div.querySelector(".StartSuggestions");let SuggestIdx=-1;Input.addEventListener("input",()=>{const Q=Input.value.trim();if(!Q){SuggestBox.classList.remove("Open");return}const Matches=State.History.filter(H=>H.Url.toLowerCase().includes(Q.toLowerCase())||H.Title.toLowerCase().includes(Q.toLowerCase())).slice(0,5);if(!Matches.length){SuggestBox.classList.remove("Open");return}SuggestBox.innerHTML=Matches.map((M,I)=>'<div class="SuggestItem'+(I===SuggestIdx?' Selected':'')+'" data-url="'+M.Url+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg><span>'+M.Title+'</span></div>').join("");SuggestBox.classList.add("Open");SuggestBox.querySelectorAll(".SuggestItem").forEach(El=>El.addEventListener("click",()=>{NavigateWithPopup(TabId,El.dataset.url);SuggestBox.classList.remove("Open")}))});Input.addEventListener("keydown",E=>{const Items=SuggestBox.querySelectorAll(".SuggestItem");if(E.key==="ArrowDown"){E.preventDefault();SuggestIdx=Math.min(SuggestIdx+1,Items.length-1);Items.forEach((It,I)=>It.classList.toggle("Selected",I===SuggestIdx))}else if(E.key==="ArrowUp"){E.preventDefault();SuggestIdx=Math.max(SuggestIdx-1,-1);Items.forEach((It,I)=>It.classList.toggle("Selected",I===SuggestIdx))}else if(E.key==="Enter"){if(SuggestIdx>=0&&Items[SuggestIdx]){NavigateWithPopup(TabId,Items[SuggestIdx].dataset.url)}else if(Input.value.trim()){NavigateWithPopup(TabId,Input.value)}SuggestBox.classList.remove("Open");SuggestIdx=-1}else if(E.key==="Escape"){SuggestBox.classList.remove("Open");SuggestIdx=-1}});Input.addEventListener("blur",()=>setTimeout(()=>{SuggestBox.classList.remove("Open");SuggestIdx=-1},150));Div.querySelector(".SearchSubmit").addEventListener("click",()=>{if(Input.value.trim())NavigateWithPopup(TabId,Input.value)});Div.querySelectorAll(".EngineBtn").forEach(Btn=>Btn.addEventListener("click",()=>{Div.querySelectorAll(".EngineBtn").forEach(B=>B.classList.remove("Active"));Btn.classList.add("Active");State.Config.Engine=Btn.dataset.engine;document.getElementById("EngineSelect").value=State.Config.Engine;SaveState()}));UpdateQuickLinks(TabId);return Div}
+function UpdateQuickLinks(TabId){const Container=document.getElementById("QuickLinks_"+TabId);if(!Container)return;Container.innerHTML=State.Bookmarks.slice(0,8).map(B=>'<div class="QuickLink" data-url="'+B.Url+'"><img src="'+GetFavicon(B.Url)+'"><span>'+B.Name+'</span></div>').join("");Container.querySelectorAll(".QuickLink").forEach(El=>El.addEventListener("click",()=>NavigateWithPopup(TabId,El.dataset.url)))}
+function CreateNewTab(Url=null){const Tab={Id:GenerateId(),Url:Url,Title:"New Tab",History:[],HistoryIndex:-1,IsNew:true};State.Tabs.push(Tab);RenderTabs();setTimeout(()=>{Tab.IsNew=false;const TabEl=document.querySelector('.Tab[data-id="'+Tab.Id+'"]');if(TabEl)TabEl.classList.remove("New")},250);ActivateTab(Tab.Id);if(!Url){const View=document.getElementById("ViewArea");View.querySelectorAll(".StartPage,.Frame").forEach(E=>E.style.display="none");View.appendChild(CreateStartPage(Tab.Id));document.getElementById("Start_"+Tab.Id).style.display="flex";document.getElementById("UrlInput").value=""}else{NavigateWithPopup(Tab.Id,Url)}return Tab.Id}
+function CloseTab(TabId){const Index=State.Tabs.findIndex(T=>T.Id===TabId);if(Index===-1)return;const TabEl=document.querySelector('.Tab[data-id="'+TabId+'"]');const DoClose=()=>{const StartEl=document.getElementById("Start_"+TabId);const FrameEl=document.getElementById("Frame_"+TabId);if(StartEl)StartEl.remove();if(FrameEl)FrameEl.remove();State.Tabs.splice(Index,1);if(!State.Tabs.length){CreateNewTab()}else if(State.ActiveTab===TabId){ActivateTab(State.Tabs[Math.min(Index,State.Tabs.length-1)].Id)}else{RenderTabs()}};if(TabEl){TabEl.classList.add("Closing");setTimeout(DoClose,150)}else{DoClose()}}
+function ActivateTab(TabId){State.ActiveTab=TabId;RenderTabs();const Tab=State.Tabs.find(T=>T.Id===TabId);if(!Tab)return;const View=document.getElementById("ViewArea");View.querySelectorAll(".StartPage,.Frame").forEach(E=>E.style.display="none");if(Tab.Url){const Frame=document.getElementById("Frame_"+TabId);if(Frame)Frame.style.display="block";document.getElementById("UrlInput").value=Tab.Url}else{let Start=document.getElementById("Start_"+TabId);if(!Start){Start=CreateStartPage(TabId);View.appendChild(Start)}Start.style.display="flex";document.getElementById("UrlInput").value=""}UpdateNavButtons()}
+function RenderTabs(){const Container=document.getElementById("TabContainer");Container.innerHTML=State.Tabs.map(T=>'<div class="Tab '+(T.Id===State.ActiveTab?"Active":"")+(T.IsNew?" New":"")+'" data-id="'+T.Id+'"><img class="TabIcon" src="'+(T.Url?GetFavicon(T.Url):"data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%2371717a%27 stroke-width=%272%27%3E%3Cpath d=%27M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z%27/%3E%3Cpath d=%27M14 2v6h6%27/%3E%3C/svg%3E")+'"><span class="TabText">'+T.Title+'</span><button class="TabClose" data-id="'+T.Id+'">✕</button></div>').join("")+'<button class="NewTabBtn" id="NewTabBtn">+</button>';Container.querySelectorAll(".Tab").forEach(El=>{El.addEventListener("click",E=>{if(!E.target.classList.contains("TabClose"))ActivateTab(El.dataset.id)});El.addEventListener("contextmenu",E=>{E.preventDefault();State.ContextTab=El.dataset.id;ShowContextMenu("TabContextMenu",E.clientX,E.clientY)})});Container.querySelectorAll(".TabClose").forEach(Btn=>Btn.addEventListener("click",E=>{E.stopPropagation();CloseTab(Btn.dataset.id)}));document.getElementById("NewTabBtn").addEventListener("click",()=>CreateNewTab())}
+function Navigate(TabId,Input){if(!Input?.trim())return;const Url=NormalizeUrl(Input);const Tab=State.Tabs.find(T=>T.Id===TabId);if(!Tab)return;Tab.Url=Url;try{Tab.Title=new URL(Url).hostname}catch{Tab.Title=Url}if(Tab.HistoryIndex<Tab.History.length-1)Tab.History=Tab.History.slice(0,Tab.HistoryIndex+1);Tab.History.push(Url);Tab.HistoryIndex=Tab.History.length-1;AddToHistory(Url,Tab.Title);RenderTabs();const View=document.getElementById("ViewArea");const Loading=document.getElementById("LoadingBar");View.querySelectorAll(".StartPage,.Frame").forEach(E=>E.style.display="none");let Frame=document.getElementById("Frame_"+TabId);if(!Frame){Frame=document.createElement("iframe");Frame.id="Frame_"+TabId;Frame.className="Frame";Frame.sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation";Frame.allow="accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture";View.appendChild(Frame)}Loading.classList.add("Active");Frame.onload=()=>{Loading.classList.remove("Active")};Frame.onerror=()=>{Loading.classList.remove("Active")};Frame.src=Url;Frame.style.display="block";document.getElementById("UrlInput").value=Url;document.getElementById("Suggestions").classList.remove("Open");UpdateNavButtons();setTimeout(()=>Loading.classList.remove("Active"),5000)}
+function GoBack(){const Tab=State.Tabs.find(T=>T.Id===State.ActiveTab);if(!Tab||Tab.HistoryIndex<=0)return;Tab.HistoryIndex--;Tab.Url=Tab.History[Tab.HistoryIndex];const Frame=document.getElementById("Frame_"+Tab.Id);if(Frame)Frame.src=Tab.Url;try{Tab.Title=new URL(Tab.Url).hostname}catch{Tab.Title=Tab.Url}RenderTabs();document.getElementById("UrlInput").value=Tab.Url;UpdateNavButtons()}
+function GoForward(){const Tab=State.Tabs.find(T=>T.Id===State.ActiveTab);if(!Tab||Tab.HistoryIndex>=Tab.History.length-1)return;Tab.HistoryIndex++;Tab.Url=Tab.History[Tab.HistoryIndex];const Frame=document.getElementById("Frame_"+Tab.Id);if(Frame)Frame.src=Tab.Url;try{Tab.Title=new URL(Tab.Url).hostname}catch{Tab.Title=Tab.Url}RenderTabs();document.getElementById("UrlInput").value=Tab.Url;UpdateNavButtons()}
+function Reload(){const Tab=State.Tabs.find(T=>T.Id===State.ActiveTab);if(!Tab?.Url)return;const Frame=document.getElementById("Frame_"+Tab.Id);if(Frame){const Loading=document.getElementById("LoadingBar");Loading.classList.add("Active");Frame.src=Tab.Url;setTimeout(()=>Loading.classList.remove("Active"),5000)}}
+function GoHome(){const Tab=State.Tabs.find(T=>T.Id===State.ActiveTab);if(!Tab)return;Tab.Url=null;Tab.Title="New Tab";const View=document.getElementById("ViewArea");View.querySelectorAll(".StartPage,.Frame").forEach(E=>E.style.display="none");let Start=document.getElementById("Start_"+Tab.Id);if(!Start){Start=CreateStartPage(Tab.Id);View.appendChild(Start)}Start.style.display="flex";document.getElementById("UrlInput").value="";RenderTabs();UpdateNavButtons()}
+function UpdateNavButtons(){const Tab=State.Tabs.find(T=>T.Id===State.ActiveTab);document.getElementById("BackBtn").disabled=!Tab||Tab.HistoryIndex<=0;document.getElementById("ForwardBtn").disabled=!Tab||Tab.HistoryIndex>=Tab.History.length-1}
+function AddToHistory(Url,Title){State.History.unshift({Url:Url,Title:Title||Url,Timestamp:Date.now()});if(State.History.length>100)State.History.pop();SaveState()}
+function FormatTime(Ts){const Diff=Date.now()-Ts;if(Diff<60000)return"now";if(Diff<3600000)return Math.floor(Diff/60000)+"m";if(Diff<86400000)return Math.floor(Diff/3600000)+"h";return new Date(Ts).toLocaleDateString()}
+function RenderHistory(){const Container=document.getElementById("HistoryBody");if(!State.History.length){Container.innerHTML='<div class="EmptyState">No history yet</div>';return}Container.innerHTML='<div class="Section"><div class="SectionLabel">Recent</div>'+State.History.map((H,I)=>'<div class="ListRow" data-url="'+H.Url+'"><img src="'+GetFavicon(H.Url)+'"><div class="ListRowInfo"><div class="ListRowTitle">'+H.Title+'</div><div class="ListRowUrl">'+H.Url+'</div></div><div class="ListRowTime">'+FormatTime(H.Timestamp)+'</div><button class="ListRowDel" data-index="'+I+'">✕</button></div>').join("")+'</div>';Container.querySelectorAll(".ListRow").forEach(El=>El.addEventListener("click",E=>{if(!E.target.classList.contains("ListRowDel")){NavigateWithPopup(State.ActiveTab,El.dataset.url);ClosePanel("HistoryPanel")}}));Container.querySelectorAll(".ListRowDel").forEach(Btn=>Btn.addEventListener("click",E=>{E.stopPropagation();State.History.splice(+Btn.dataset.index,1);SaveState();RenderHistory()}))}
+function RenderBookmarks(){const Container=document.getElementById("BookmarkBar");Container.innerHTML=State.Bookmarks.slice(0,15).map((B,I)=>'<div class="BookmarkItem" data-url="'+B.Url+'" data-index="'+I+'"><img src="'+GetFavicon(B.Url)+'"><span>'+B.Name+'</span></div>').join("");Container.querySelectorAll(".BookmarkItem").forEach(El=>{El.addEventListener("click",()=>NavigateWithPopup(State.ActiveTab,El.dataset.url));El.addEventListener("contextmenu",E=>{E.preventDefault();State.ContextBookmark=+El.dataset.index;ShowContextMenu("BookmarkContextMenu",E.clientX,E.clientY)})});Container.style.display=State.Config.ShowBookmarks&&State.Bookmarks.length?"flex":"none";State.Tabs.forEach(T=>UpdateQuickLinks(T.Id))}
+function AddBookmark(){const Tab=State.Tabs.find(T=>T.Id===State.ActiveTab);document.getElementById("BookmarkNameInput").value=Tab?.Title||"";document.getElementById("BookmarkUrlInput").value=Tab?.Url||"";OpenModal("BookmarkModal")}
+function SaveBookmark(){const Name=document.getElementById("BookmarkNameInput").value.trim();const Url=document.getElementById("BookmarkUrlInput").value.trim();if(!Name||!Url)return;State.Bookmarks.push({Name:Name,Url:NormalizeUrl(Url)});SaveState();RenderBookmarks();CloseModal("BookmarkModal");ShowToast("Bookmark saved")}
+function ShowContextMenu(Id,X,Y){HideContextMenus();const Menu=document.getElementById(Id);Menu.style.left=X+"px";Menu.style.top=Y+"px";Menu.classList.add("Open")}
+function HideContextMenus(){document.querySelectorAll(".ContextMenu").forEach(M=>M.classList.remove("Open"))}
+function OpenPanel(Id){document.getElementById("Overlay").classList.add("Open");document.getElementById(Id).classList.add("Open");if(Id==="HistoryPanel")RenderHistory()}
+function ClosePanel(Id){document.getElementById("Overlay").classList.remove("Open");document.getElementById(Id).classList.remove("Open")}
+function OpenModal(Id){document.getElementById("Overlay").classList.add("Open");document.getElementById(Id).classList.add("Open")}
+function CloseModal(Id){document.getElementById("Overlay").classList.remove("Open");document.getElementById(Id).classList.remove("Open")}
+function ToggleFullscreen(){State.IsFullscreen=!State.IsFullscreen;document.getElementById("Chrome").classList.toggle("Hidden",State.IsFullscreen);document.getElementById("ViewArea").classList.toggle("Fullscreen",State.IsFullscreen);document.getElementById("ExitFullscreen").classList.toggle("Show",State.IsFullscreen);if(State.IsFullscreen)document.documentElement.requestFullscreen?.();else document.exitFullscreen?.()}
+document.getElementById("BackBtn").addEventListener("click",GoBack);
+document.getElementById("ForwardBtn").addEventListener("click",GoForward);
+document.getElementById("ReloadBtn").addEventListener("click",Reload);
+document.getElementById("HomeBtn").addEventListener("click",GoHome);
+document.getElementById("BookmarkBtn").addEventListener("click",AddBookmark);
+document.getElementById("HistoryBtn").addEventListener("click",()=>OpenPanel("HistoryPanel"));
+document.getElementById("SettingsBtn").addEventListener("click",()=>OpenPanel("SettingsPanel"));
+document.getElementById("FullscreenBtn").addEventListener("click",ToggleFullscreen);
+document.getElementById("ExitFullscreen").addEventListener("click",ToggleFullscreen);
+document.getElementById("UrlInput").addEventListener("input",E=>UpdateSuggestions(E.target.value));
+document.getElementById("UrlInput").addEventListener("keydown",E=>{const Container=document.getElementById("Suggestions");const Items=Container.querySelectorAll(".SuggestItem");if(E.key==="ArrowDown"){E.preventDefault();State.SuggestIndex=Math.min(State.SuggestIndex+1,Items.length-1);Items.forEach((It,I)=>It.classList.toggle("Selected",I===State.SuggestIndex))}else if(E.key==="ArrowUp"){E.preventDefault();State.SuggestIndex=Math.max(State.SuggestIndex-1,-1);Items.forEach((It,I)=>It.classList.toggle("Selected",I===State.SuggestIndex))}else if(E.key==="Enter"){if(State.SuggestIndex>=0&&Items[State.SuggestIndex]){NavigateWithPopup(State.ActiveTab,Items[State.SuggestIndex].dataset.url);Container.classList.remove("Open")}else{NavigateWithPopup(State.ActiveTab,E.target.value)}State.SuggestIndex=-1}else if(E.key==="Escape"){Container.classList.remove("Open");State.SuggestIndex=-1}});
+document.getElementById("UrlInput").addEventListener("focus",E=>UpdateSuggestions(E.target.value));
+document.getElementById("UrlInput").addEventListener("blur",()=>setTimeout(()=>{document.getElementById("Suggestions").classList.remove("Open");State.SuggestIndex=-1},150));
+document.getElementById("Overlay").addEventListener("click",()=>{document.querySelectorAll(".Panel,.Modal").forEach(P=>P.classList.remove("Open"));document.getElementById("Overlay").classList.remove("Open")});
+document.getElementById("HistoryClose").addEventListener("click",()=>ClosePanel("HistoryPanel"));
+document.getElementById("SettingsClose").addEventListener("click",()=>ClosePanel("SettingsPanel"));
+document.getElementById("BookmarkSave").addEventListener("click",SaveBookmark);
+document.getElementById("BookmarkCancel").addEventListener("click",()=>CloseModal("BookmarkModal"));
+document.getElementById("EngineSelect").addEventListener("change",E=>{State.Config.Engine=E.target.value;SaveState()});
+document.getElementById("BookmarkToggle").addEventListener("click",function(){this.classList.toggle("On");State.Config.ShowBookmarks=this.classList.contains("On");SaveState();RenderBookmarks()});
+document.getElementById("ClearHistoryBtn").addEventListener("click",()=>{State.History=[];SaveState();ShowToast("History cleared")});
+document.getElementById("ClearCookiesBtn").addEventListener("click",()=>{document.cookie.split(";").forEach(C=>document.cookie=C.replace(/^ +/,"").replace(/=.*/,"=;expires="+new Date().toUTCString()+";path=/"));ShowToast("Cookies cleared")});
+document.getElementById("TabContextMenu").addEventListener("click",E=>{const Action=E.target.closest(".ContextItem")?.dataset.action;if(!Action)return;HideContextMenus();if(Action==="newtab")CreateNewTab();if(Action==="reload"&&State.ContextTab){const Tab=State.Tabs.find(T=>T.Id===State.ContextTab);if(Tab?.Url){const Frame=document.getElementById("Frame_"+Tab.Id);if(Frame)Frame.src=Tab.Url}}if(Action==="duplicate"&&State.ContextTab){const Tab=State.Tabs.find(T=>T.Id===State.ContextTab);if(Tab?.Url)CreateNewTab(Tab.Url)}if(Action==="close"&&State.ContextTab)CloseTab(State.ContextTab)});
+document.getElementById("BookmarkContextMenu").addEventListener("click",E=>{const Action=E.target.closest(".ContextItem")?.dataset.action;if(!Action||State.ContextBookmark===null)return;HideContextMenus();const Bookmark=State.Bookmarks[State.ContextBookmark];if(Action==="open"&&Bookmark)NavigateWithPopup(State.ActiveTab,Bookmark.Url);if(Action==="newtab"&&Bookmark)CreateNewTab(Bookmark.Url);if(Action==="delete"){State.Bookmarks.splice(State.ContextBookmark,1);SaveState();RenderBookmarks();ShowToast("Bookmark deleted")}});
+document.addEventListener("click",E=>{if(!E.target.closest(".ContextMenu"))HideContextMenus()});
+document.addEventListener("keydown",E=>{if(E.ctrlKey||E.metaKey){if(E.key==="t"){E.preventDefault();CreateNewTab()}if(E.key==="w"){E.preventDefault();CloseTab(State.ActiveTab)}if(E.key==="l"){E.preventDefault();document.getElementById("UrlInput").focus();document.getElementById("UrlInput").select()}if(E.key==="r"){E.preventDefault();Reload()}if(E.key==="d"){E.preventDefault();AddBookmark()}}if(E.key==="F11"){E.preventDefault();ToggleFullscreen()}if(E.key==="Escape"){if(State.IsFullscreen)ToggleFullscreen();HideContextMenus();document.getElementById("Suggestions").classList.remove("Open")}});
+document.addEventListener("fullscreenchange",()=>{if(!document.fullscreenElement&&State.IsFullscreen){State.IsFullscreen=false;document.getElementById("Chrome").classList.remove("Hidden");document.getElementById("ViewArea").classList.remove("Fullscreen");document.getElementById("ExitFullscreen").classList.remove("Show")}});
+document.getElementById("EngineSelect").value=State.Config.Engine;
+document.getElementById("BookmarkToggle").classList.toggle("On",State.Config.ShowBookmarks);
+RenderBookmarks();
+CreateNewTab();
+
+function NavigateWithPopup(TabId, Input) {
+    const Url = NormalizeUrl(Input);
+    Navigate(TabId, Input);
+    window.location.href = Url;
+}
+</script>
+</body>
+</html>
